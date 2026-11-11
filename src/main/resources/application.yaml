@@ -1,10 +1,10 @@
 spring:
   application:
-    name: DesingPatternsProject
+    name: CompanyRegistry
 
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/desingpatterns
+    url: jdbc:postgresql://localhost:5432/companyregistry
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
 

@@ -4,11 +4,26 @@ import br.com.Ronald.DesingPatternsProject.Exception.AlreadyExistsException;
 import br.com.Ronald.DesingPatternsProject.Exception.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ExceptionDTO> handleMethodArgumentNotValidException(
+            MethodArgumentNotValidException ex
+    ) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(error -> error.getDefaultMessage())
+                .orElse("Invalid request");
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new ExceptionDTO(message, HttpStatus.BAD_REQUEST.value())
+        );
+    }
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ExceptionDTO> handleNotFoundException(NotFoundException ex){
