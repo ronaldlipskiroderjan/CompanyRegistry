@@ -7,10 +7,10 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
 @EnableFeignClients
-public class DesingPatternsProjectApplication {
+@EnableAsync
+public class CompanyRegistryApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(DesingPatternsProjectApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(CompanyRegistryApplication.class, args);
+    }
 }
