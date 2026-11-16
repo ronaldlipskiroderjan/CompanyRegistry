@@ -5,6 +5,7 @@ import br.com.Ronald.DesingPatternsProject.Exception.NotFoundException;
 import br.com.Ronald.DesingPatternsProject.database.enums.RelationshipType;
 import br.com.Ronald.DesingPatternsProject.database.model.CompanyEntity;
 import br.com.Ronald.DesingPatternsProject.database.repository.CompanyRepository;
+import br.com.Ronald.DesingPatternsProject.dtos.Request.CompanyPatchRequestDTO;
 import br.com.Ronald.DesingPatternsProject.dtos.Request.CompanyRequestDTO;
 import br.com.Ronald.DesingPatternsProject.dtos.Response.BrazilApiCompanyResponseDTO;
 import br.com.Ronald.DesingPatternsProject.dtos.Response.CompanyResponseDTO;
@@ -69,6 +70,8 @@ class CompanyServiceImplTest {
                         RelationshipType.SUPPLIER
                 )
         );
+        verify(companyRepository).findAll();
+        verifyNoInteractions(brazilApiClient);
     }
 
     @Test
@@ -78,8 +81,17 @@ class CompanyServiceImplTest {
 
         CompanyResponseDTO result = companyService.findByCnpj(CNPJ);
 
-        assertThat(result.cnpj()).isEqualTo(CNPJ);
-        assertThat(result.relationshipType()).isEqualTo(RelationshipType.PARTNER);
+        assertThat(result).isEqualTo(new CompanyResponseDTO(
+                CNPJ,
+                "Empresa Exemplo S.A.",
+                "Empresa Exemplo",
+                "Sao Paulo",
+                "SP",
+                "ATIVA",
+                RelationshipType.PARTNER
+        ));
+        verify(companyRepository).findById(CNPJ);
+        verifyNoInteractions(brazilApiClient);
     }
 
     @Test
@@ -92,13 +104,36 @@ class CompanyServiceImplTest {
     }
 
     @Test
+    void shouldListCompaniesByRelationshipType() {
+        CompanyEntity customer = company(CNPJ, RelationshipType.CUSTOMER);
+        when(companyRepository.findAllByRelationshipType(RelationshipType.CUSTOMER))
+                .thenReturn(List.of(customer));
+
+        List<CompanyResponseDTO> result = companyService.findByRelationshipType(
+                RelationshipType.CUSTOMER
+        );
+
+        assertThat(result).containsExactly(new CompanyResponseDTO(
+                CNPJ,
+                "Empresa Exemplo S.A.",
+                "Empresa Exemplo",
+                "Sao Paulo",
+                "SP",
+                "ATIVA",
+                RelationshipType.CUSTOMER
+        ));
+        verify(companyRepository).findAllByRelationshipType(RelationshipType.CUSTOMER);
+        verifyNoInteractions(brazilApiClient);
+    }
+
+    @Test
     void shouldFetchExternalDataAndSaveCompany() throws Exception {
         String formattedCnpj = "12.345.678/0001-90";
         CompanyRequestDTO request = new CompanyRequestDTO(
                 formattedCnpj,
                 RelationshipType.CUSTOMER
         );
-        when(companyRepository.existsByCnpj(formattedCnpj)).thenReturn(false);
+        when(companyRepository.existsById(CNPJ)).thenReturn(false);
         when(brazilApiClient.findCompanyByCnpj(CNPJ))
                 .thenReturn(brazilApiResponse());
 
@@ -124,7 +159,7 @@ class CompanyServiceImplTest {
                 CNPJ,
                 RelationshipType.CUSTOMER
         );
-        when(companyRepository.existsByCnpj(CNPJ)).thenReturn(true);
+        when(companyRepository.existsById(CNPJ)).thenReturn(true);
 
         assertThatThrownBy(() -> companyService.create(request))
                 .isInstanceOf(AlreadyExistsException.class)
@@ -137,31 +172,28 @@ class CompanyServiceImplTest {
     @Test
     void shouldUpdateRelationshipType() throws Exception {
         CompanyEntity company = company(CNPJ, RelationshipType.PROSPECT);
+        CompanyPatchRequestDTO request = new CompanyPatchRequestDTO(RelationshipType.CUSTOMER);
         when(companyRepository.findById(CNPJ)).thenReturn(Optional.of(company));
-        CompanyRequestDTO request = new CompanyRequestDTO(
-                CNPJ,
-                RelationshipType.CUSTOMER
-        );
 
-        companyService.updateRelationshipType(request);
+        companyService.updateRelationshipType(CNPJ, request);
 
         assertThat(company.getRelationshipType()).isEqualTo(RelationshipType.CUSTOMER);
+        verify(companyRepository).findById(CNPJ);
         verify(companyRepository).save(company);
+        verifyNoInteractions(brazilApiClient);
     }
 
     @Test
     void shouldRejectUpdateWhenCompanyDoesNotExist() {
+        CompanyPatchRequestDTO request = new CompanyPatchRequestDTO(RelationshipType.CUSTOMER);
         when(companyRepository.findById(CNPJ)).thenReturn(Optional.empty());
-        CompanyRequestDTO request = new CompanyRequestDTO(
-                CNPJ,
-                RelationshipType.CUSTOMER
-        );
 
-        assertThatThrownBy(() -> companyService.updateRelationshipType(request))
+        assertThatThrownBy(() -> companyService.updateRelationshipType(CNPJ, request))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("Company not found!");
 
         verify(companyRepository, never()).save(any(CompanyEntity.class));
+        verifyNoInteractions(brazilApiClient);
     }
 
     @Test

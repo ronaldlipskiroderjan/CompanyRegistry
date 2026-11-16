@@ -4,33 +4,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public enum RelationshipType {
     @JsonProperty("CLIENTE")
-    CUSTOMER("CLIENTE"),
+    CUSTOMER,
 
     @JsonProperty("FORNECEDOR")
-    SUPPLIER("FORNECEDOR"),
+    SUPPLIER,
 
     @JsonProperty("PARCEIRO")
-    PARTNER("PARCEIRO"),
+    PARTNER,
 
     @JsonProperty("PROSPECT")
-    PROSPECT("PROSPECT");
-
-    private final String databaseValue;
-
-    RelationshipType(String databaseValue) {
-        this.databaseValue = databaseValue;
-    }
-
-    public String databaseValue() {
-        return databaseValue;
-    }
-
-    public static RelationshipType fromDatabaseValue(String databaseValue) {
-        for (RelationshipType relationshipType : values()) {
-            if (relationshipType.databaseValue.equals(databaseValue)) {
-                return relationshipType;
-            }
-        }
-        throw new IllegalArgumentException("Unknown relationship type: " + databaseValue);
-    }
+    PROSPECT
 }

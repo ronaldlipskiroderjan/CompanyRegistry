@@ -1,9 +1,7 @@
 package br.com.Ronald.DesingPatternsProject.database.model;
 
-import br.com.Ronald.DesingPatternsProject.database.converter.RelationshipTypeConverter;
 import br.com.Ronald.DesingPatternsProject.database.enums.RelationshipType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -41,7 +39,6 @@ public class CompanyEntity {
     @Column(name = "situacao_cadastral", nullable = false)
     private String registrationStatus;
 
-    @Convert(converter = RelationshipTypeConverter.class)
     @Column(name = "tipo_relacionamento", nullable = false)
     private RelationshipType relationshipType;
 }

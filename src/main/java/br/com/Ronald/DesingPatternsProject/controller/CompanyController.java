@@ -1,8 +1,10 @@
 package br.com.Ronald.DesingPatternsProject.controller;
 
+import br.com.Ronald.DesingPatternsProject.database.enums.RelationshipType;
+import br.com.Ronald.DesingPatternsProject.dtos.Request.CompanyPatchRequestDTO;
 import br.com.Ronald.DesingPatternsProject.dtos.Request.CompanyRequestDTO;
 import br.com.Ronald.DesingPatternsProject.dtos.Response.CompanyResponseDTO;
-import br.com.Ronald.DesingPatternsProject.service.CompanyService;
+import br.com.Ronald.DesingPatternsProject.service.impl.CompanyServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,7 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CompanyController {
 
-    private final CompanyService companyService;
+    private final CompanyServiceImpl companyService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -37,23 +39,27 @@ public class CompanyController {
         return companyService.findAll();
     }
 
-    @GetMapping("/{cnpj}")
+    @GetMapping("/id/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public CompanyResponseDTO findByCnpj(
-            @PathVariable("cnpj") String cnpj
-    ) throws Exception {
+    public CompanyResponseDTO findByCnpj(@PathVariable("id") String cnpj) throws Exception {
         return companyService.findByCnpj(cnpj);
     }
 
-    @PatchMapping("/relationship-type")
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public void updateRelationshipType(@Valid @RequestBody CompanyRequestDTO request) throws Exception {
-        companyService.updateRelationshipType(request);
+    @GetMapping("/relationshipType/{relationshipType}")
+    @ResponseStatus(HttpStatus.OK)
+    public List<CompanyResponseDTO> findByRelationshipType(@PathVariable RelationshipType relationshipType) {
+        return companyService.findByRelationshipType(relationshipType);
     }
 
-    @DeleteMapping("/{cnpj}")
+    @PatchMapping("id/{id}/relationship")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void updateRelationshipType(@PathVariable("id") String cnpj, @Valid @RequestBody CompanyPatchRequestDTO request) throws Exception {
+        companyService.updateRelationshipType(cnpj, request);
+    }
+
+    @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable("cnpj") String cnpj) throws Exception {
+    public void delete(@PathVariable("id") String cnpj) throws Exception {
         companyService.delete(cnpj);
     }
 }
