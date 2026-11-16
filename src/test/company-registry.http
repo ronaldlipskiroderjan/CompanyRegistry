@@ -1,0 +1,72 @@
+@baseUrl = http://localhost:8080
+@cnpj = 00000000000191
+
+### 1. Cadastrar empresa
+POST {{baseUrl}}/v1/companies
+Content-Type: application/json
+
+{
+  "cnpj": "{{cnpj}}",
+  "relationshipType": "CLIENTE"
+}
+
+> {%
+    client.test("Cadastro retorna 201", function () {
+        client.assert(response.status === 201, "Status recebido: " + response.status);
+    });
+%}
+
+### 2. Listar todas as empresas
+GET {{baseUrl}}/v1/companies
+Accept: application/json
+
+> {%
+    client.test("Listagem retorna 200", function () {
+        client.assert(response.status === 200, "Status recebido: " + response.status);
+    });
+%}
+
+### 3. Buscar empresa pelo CNPJ
+GET {{baseUrl}}/v1/companies/id/{{cnpj}}
+Accept: application/json
+
+> {%
+    client.test("Busca por CNPJ retorna 200", function () {
+        client.assert(response.status === 200, "Status recebido: " + response.status);
+        client.assert(response.body.cnpj === "00000000000191", "CNPJ inesperado");
+    });
+%}
+
+### 4. Listar empresas pelo tipo de relacionamento
+# O path usa o nome do enum Java: CUSTOMER, SUPPLIER, PARTNER ou PROSPECT.
+GET {{baseUrl}}/v1/companies/relationshipType/CUSTOMER
+Accept: application/json
+
+> {%
+    client.test("Filtro por relacionamento retorna 200", function () {
+        client.assert(response.status === 200, "Status recebido: " + response.status);
+    });
+%}
+
+### 5. Atualizar o tipo de relacionamento
+PATCH {{baseUrl}}/v1/companies/id/{{cnpj}}/relationship
+Content-Type: application/json
+
+{
+  "relationship": "FORNECEDOR"
+}
+
+> {%
+    client.test("Atualizacao retorna 202", function () {
+        client.assert(response.status === 202, "Status recebido: " + response.status);
+    });
+%}
+
+### 6. Excluir empresa
+DELETE {{baseUrl}}/v1/companies/{{cnpj}}
+
+> {%
+    client.test("Exclusao retorna 204", function () {
+        client.assert(response.status === 204, "Status recebido: " + response.status);
+    });
+%}

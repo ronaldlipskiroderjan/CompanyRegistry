@@ -2,8 +2,10 @@ package br.com.Ronald.DesingPatternsProject.service.impl;
 
 import br.com.Ronald.DesingPatternsProject.Exception.AlreadyExistsException;
 import br.com.Ronald.DesingPatternsProject.Exception.NotFoundException;
+import br.com.Ronald.DesingPatternsProject.database.enums.RelationshipType;
 import br.com.Ronald.DesingPatternsProject.database.model.CompanyEntity;
 import br.com.Ronald.DesingPatternsProject.database.repository.CompanyRepository;
+import br.com.Ronald.DesingPatternsProject.dtos.Request.CompanyPatchRequestDTO;
 import br.com.Ronald.DesingPatternsProject.dtos.Request.CompanyRequestDTO;
 import br.com.Ronald.DesingPatternsProject.dtos.Response.BrazilApiCompanyResponseDTO;
 import br.com.Ronald.DesingPatternsProject.dtos.Response.CompanyResponseDTO;
@@ -22,23 +24,8 @@ public class CompanyServiceImpl implements CompanyService {
     private final BrazilApiClient brazilApiClient;
 
     @Override
-    public List<CompanyResponseDTO> findAll() {
-        return companyRepository.findAll()
-                .stream()
-                .map(this::toDTO)
-                .toList();
-    }
-
-    @Override
-    public CompanyResponseDTO findByCnpj(String cnpj) throws Exception {
-        return companyRepository.findById(cnpj)
-                .map(this::toDTO)
-                .orElseThrow(() -> new NotFoundException("Company not found!"));
-    }
-
-    @Override
     public void create(CompanyRequestDTO request) throws Exception {
-        if (companyRepository.existsByCnpj(request.cnpj())) {
+        if (companyRepository.existsById(request.cnpj().replaceAll("[^0-9A-Za-z]", ""))) {
             throw new AlreadyExistsException("Company already registered in the system...");
         }
 
@@ -59,10 +46,33 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     @Override
-    public void updateRelationshipType(CompanyRequestDTO request) throws Exception {
-        CompanyEntity company = companyRepository.findById(request.cnpj())
+    public List<CompanyResponseDTO> findAll() {
+        return companyRepository.findAll()
+                .stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    @Override
+    public CompanyResponseDTO findByCnpj(String cnpj) throws Exception {
+        return companyRepository.findById(cnpj)
+                .map(this::toDTO)
                 .orElseThrow(() -> new NotFoundException("Company not found!"));
-        company.setRelationshipType(request.relationshipType());
+    }
+
+    @Override
+    public List<CompanyResponseDTO> findByRelationshipType(RelationshipType relationshipType) {
+        return companyRepository.findAllByRelationshipType(relationshipType)
+                .stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    @Override
+    public void updateRelationshipType(String cnpj, CompanyPatchRequestDTO request) throws Exception {
+        CompanyEntity company = companyRepository.findById(cnpj)
+                .orElseThrow(() -> new NotFoundException("Company not found!"));
+        company.setRelationshipType(request.relationship());
         companyRepository.save(company);
     }
 

@@ -3,10 +3,11 @@ package br.com.Ronald.DesingPatternsProject.controller;
 import br.com.Ronald.DesingPatternsProject.Exception.AlreadyExistsException;
 import br.com.Ronald.DesingPatternsProject.Exception.NotFoundException;
 import br.com.Ronald.DesingPatternsProject.database.enums.RelationshipType;
+import br.com.Ronald.DesingPatternsProject.dtos.Request.CompanyPatchRequestDTO;
 import br.com.Ronald.DesingPatternsProject.dtos.Request.CompanyRequestDTO;
 import br.com.Ronald.DesingPatternsProject.dtos.Response.CompanyResponseDTO;
 import br.com.Ronald.DesingPatternsProject.handler.GlobalExceptionHandler;
-import br.com.Ronald.DesingPatternsProject.service.CompanyService;
+import br.com.Ronald.DesingPatternsProject.service.impl.CompanyServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +38,7 @@ class CompanyControllerTest {
     private static final String CNPJ = "12345678000190";
 
     @Mock
-    private CompanyService companyService;
+    private CompanyServiceImpl companyService;
 
     private MockMvc mockMvc;
 
@@ -57,18 +58,30 @@ class CompanyControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$[0].cnpj").value(CNPJ))
                 .andExpect(jsonPath("$[0].razaoSocial").value("Empresa Exemplo S.A."))
+                .andExpect(jsonPath("$[0].nomeFantasia").value("Empresa Exemplo"))
+                .andExpect(jsonPath("$[0].municipio").value("Sao Paulo"))
+                .andExpect(jsonPath("$[0].uf").value("SP"))
+                .andExpect(jsonPath("$[0].situacaoCadastral").value("ATIVA"))
                 .andExpect(jsonPath("$[0].tipoRelacionamento").value("CLIENTE"));
+
+        verify(companyService).findAll();
     }
 
     @Test
     void shouldFindCompanyByCnpj() throws Exception {
         when(companyService.findByCnpj(CNPJ)).thenReturn(companyResponse());
 
-        mockMvc.perform(get("/v1/companies/{cnpj}", CNPJ))
+        mockMvc.perform(get("/v1/companies/id/{id}", CNPJ))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cnpj").value(CNPJ))
+                .andExpect(jsonPath("$.razaoSocial").value("Empresa Exemplo S.A."))
+                .andExpect(jsonPath("$.nomeFantasia").value("Empresa Exemplo"))
                 .andExpect(jsonPath("$.municipio").value("Sao Paulo"))
-                .andExpect(jsonPath("$.uf").value("SP"));
+                .andExpect(jsonPath("$.uf").value("SP"))
+                .andExpect(jsonPath("$.situacaoCadastral").value("ATIVA"))
+                .andExpect(jsonPath("$.tipoRelacionamento").value("CLIENTE"));
+
+        verify(companyService).findByCnpj(CNPJ);
     }
 
     @Test
@@ -76,17 +89,39 @@ class CompanyControllerTest {
         when(companyService.findByCnpj(CNPJ))
                 .thenThrow(new NotFoundException("Company not found!"));
 
-        mockMvc.perform(get("/v1/companies/{cnpj}", CNPJ))
+        mockMvc.perform(get("/v1/companies/id/{id}", CNPJ))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Company not found!"))
                 .andExpect(jsonPath("$.code").value(404));
     }
 
     @Test
+    void shouldListCompaniesByRelationshipType() throws Exception {
+        when(companyService.findByRelationshipType(RelationshipType.CUSTOMER))
+                .thenReturn(List.of(companyResponse()));
+
+        mockMvc.perform(get(
+                        "/v1/companies/relationshipType/{relationshipType}",
+                        RelationshipType.CUSTOMER
+                ))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$[0].cnpj").value(CNPJ))
+                .andExpect(jsonPath("$[0].razaoSocial").value("Empresa Exemplo S.A."))
+                .andExpect(jsonPath("$[0].nomeFantasia").value("Empresa Exemplo"))
+                .andExpect(jsonPath("$[0].municipio").value("Sao Paulo"))
+                .andExpect(jsonPath("$[0].uf").value("SP"))
+                .andExpect(jsonPath("$[0].situacaoCadastral").value("ATIVA"))
+                .andExpect(jsonPath("$[0].tipoRelacionamento").value("CLIENTE"));
+
+        verify(companyService).findByRelationshipType(RelationshipType.CUSTOMER);
+    }
+
+    @Test
     void shouldCreateCompany() throws Exception {
         mockMvc.perform(post("/v1/companies")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestJson("CLIENTE")))
+                        .content(createRequestJson("CLIENTE")))
                 .andExpect(status().isCreated())
                 .andExpect(content().string(""));
 
@@ -105,7 +140,23 @@ class CompanyControllerTest {
                                 }
                                 """.formatted(CNPJ)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("tipoRelacionamento is required"))
+                .andExpect(jsonPath("$.message").value("relationshipType is required"))
+                .andExpect(jsonPath("$.code").value(400));
+
+        verifyNoInteractions(companyService);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenCnpjIsMissing() throws Exception {
+        mockMvc.perform(post("/v1/companies")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "relationshipType": "CLIENTE"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("cnpj is required"))
                 .andExpect(jsonPath("$.code").value(400));
 
         verifyNoInteractions(companyService);
@@ -118,7 +169,7 @@ class CompanyControllerTest {
 
         mockMvc.perform(post("/v1/companies")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestJson("CLIENTE")))
+                        .content(createRequestJson("CLIENTE")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
                         .value("Company already registered in the system..."))
@@ -127,29 +178,29 @@ class CompanyControllerTest {
 
     @Test
     void shouldUpdateRelationshipType() throws Exception {
-        mockMvc.perform(patch("/v1/companies/relationship-type")
+        mockMvc.perform(patch("/v1/companies/id/{id}/relationship", CNPJ)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestJson("FORNECEDOR")))
+                        .content(patchRequestJson("FORNECEDOR")))
                 .andExpect(status().isAccepted())
                 .andExpect(content().string(""));
 
         verify(companyService).updateRelationshipType(
-                new CompanyRequestDTO(CNPJ, RelationshipType.SUPPLIER)
+                CNPJ,
+                new CompanyPatchRequestDTO(RelationshipType.SUPPLIER)
         );
     }
 
     @Test
     void shouldReturnBadRequestWhenRelationshipTypeIsNullOnUpdate() throws Exception {
-        mockMvc.perform(patch("/v1/companies/relationship-type")
+        mockMvc.perform(patch("/v1/companies/id/{id}/relationship", CNPJ)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "cnpj": "%s",
-                                  "tipoRelacionamento": null
+                                  "relationship": null
                                 }
-                                """.formatted(CNPJ)))
+                                """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("tipoRelacionamento is required"))
+                .andExpect(jsonPath("$.message").value("relationshipType is required"))
                 .andExpect(jsonPath("$.code").value(400));
 
         verifyNoInteractions(companyService);
@@ -176,12 +227,20 @@ class CompanyControllerTest {
         );
     }
 
-    private String requestJson(String relationshipType) {
+    private String createRequestJson(String relationshipType) {
         return """
                 {
                   "cnpj": "%s",
-                  "tipoRelacionamento": "%s"
+                  "relationshipType": "%s"
                 }
                 """.formatted(CNPJ, relationshipType);
+    }
+
+    private String patchRequestJson(String relationship) {
+        return """
+                {
+                  "relationship": "%s"
+                }
+                """.formatted(relationship);
     }
 }
